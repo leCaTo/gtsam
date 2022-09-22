@@ -105,7 +105,7 @@ if(NOT ( IS_CXX_STANDARD_17 AND (Eigen3_VERSION GREATER_EQUAL 3.4) ) )
     include(max_alignment/determine_max_alignment)
 
     # Setting maximum alignment
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_MAX_STATIC_ALIGN_BYTES=${MAX_ALIGNMENT}")
+    list_append_cache(GTSAM_COMPILE_DEFINITIONS_PUBLIC "EIGEN_MAX_STATIC_ALIGN_BYTES=${MAX_ALIGNMENT}")
 
     # Following line would deactivate vectorization and alignment completely, (only for debugging purposes)
     #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_DONT_VECTORIZE -DEIGEN_DONT_ALIGN -DEIGEN_UNALIGNED_VECTORIZE=0")
