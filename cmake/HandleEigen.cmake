@@ -78,3 +78,37 @@ if (MSVC)
     endif()
     list_append_cache(GTSAM_COMPILE_OPTIONS_PRIVATE "/wd4244") # Disable loss of precision which is thrown all over our Eigen
 endif()
+
+
+# Checking cxx standard explicitly activated in flags
+string(REGEX MATCH "-std=(.*) " CXX_STANDARD_FLAG "${CMAKE_CXX_FLAGS}")
+set(CXX_STANDARD_FLAG "${CMAKE_MATCH_1}" CACHE INTERNAL "")
+
+# TODO: Check CXX standard detection, is this the proper way?
+if(CXX_STANDARD_FLAG STREQUAL "c++17" OR CXX_STANDARD_FLAG STREQUAL "gnu++17" OR CXX_STANDARD EQUAL 17 OR CMAKE_CXX_STANDARD EQUAL 17)
+    set(IS_CXX_STANDARD_17 TRUE)
+endif ()
+
+# Checking if c++17 is activated in flags or in the cmake CXX_STANDARD property
+# Checking Eigen3 version greater or equal to 3.4
+# On C++17, Eigen 3.4 and a modern compiler, new features where added to Eigen allowing auto-magic handling of alignment requirements.
+if(NOT ( IS_CXX_STANDARD_17 AND (Eigen3_VERSION GREATER_EQUAL 3.4) ) )
+    # If toolchain requirements are not met, Eigen cannot handle vectorization alignment automatically and there are code requirements to comply with,
+    # (ex. adding EIGEN_MAKE_ALIGNED_OPERATOR_NEW on classes with Eigen members).
+    # see https://eigen.tuxfamily.org/dox/group__TopicUnalignedArrayAssert.html
+
+    # To ensure runtime safeness without code requirements, vectorization is tuned-down.
+    # Static code alignment is set to the maximum reported by the platform (usually 16 bytes), while dynamic heap alignment
+    # remains untouched. This effectively deactivates 32 and 64 bytes AVX over-alignment vectorization in 64bit systems.
+
+    # Determining platform max alignment, see https://en.cppreference.com/w/cpp/types/max_align_t
+    include(max_alignment/determine_max_alignment)
+
+    # Setting maximum alignment
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_MAX_STATIC_ALIGN_BYTES=${MAX_ALIGNMENT}")
+
+    # Following line would deactivate vectorization and alignment completely, (only for debugging purposes)
+    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_DONT_VECTORIZE -DEIGEN_DONT_ALIGN -DEIGEN_UNALIGNED_VECTORIZE=0")
+
+    message(STATUS "Setting Eigen3 maximum alignment, EIGEN_MAX_STATIC_ALIGN_BYTES=${MAX_ALIGNMENT} ")
+endif ()
